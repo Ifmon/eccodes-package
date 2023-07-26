@@ -7,7 +7,7 @@ This project aims to simplify the installation of the "eccodes" library by gener
 ## Why Use .deb Packages? ⚙️
 As ECMWF does not provide a package repository for "eccodes," users often have to compile and install the library manually, which can be a time-consuming and error-prone process. By generating .deb packages, this project facilitates the installation and maintenance of "eccodes" on Debian-based systems, allowing users to quickly install the library with the package manager. 📦
 
-## Supported distribution
+## Supported distributions
 
 | Platform        | Support                   |
 |-----------------|---------------------------|
