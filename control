@@ -1,0 +1,7 @@
+Package: eccodes
+Version: 2.31.0
+Section: misc
+Priority: optional
+Architecture: all
+Maintainer: Ifmon
+Description: Eccodes for debian

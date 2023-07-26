@@ -1,0 +1,89 @@
+name: Build and package EcCodes
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+    
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+
+jobs:
+  build_and_package:
+    runs-on: debian-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install AEC Library
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libaec-dev
+          
+      - name: Download eccodes tarball
+        run: |
+          chmod +x download.sh  
+          ./download.sh  
+      - name: Set Package Version
+        id: set_version
+        run: echo "PACKAGE_VERSION=$(cat version.txt)" >> $GITHUB_ENV
+
+
+      - name: Extract Source Tarball
+        run: tar -xzf "eccodes-$(cat version.txt).tar.gz"  # Use the version from the file
+
+      - name: Create Build Directory
+        run: mkdir build
+
+      - name: Run CMake
+        run: cd build && cmake ../eccodes-$(cat ../version.txt)-Source -DCMAKE_INSTALL_PREFIX=../eccodes -DCMAKE_BUILD_TYPE=Release  # Use the version from the file
+
+      - name: Build and Install
+        run: |
+          cd build
+          make
+          ctest
+          make install
+
+      - name: Package the Built Files
+        working-directory: eccodes
+        run: |
+          mkdir DEBIAN
+          cp ../control DEBIAN
+          cd ..
+          dpkg-deb --build eccodes
+
+      - name: Check deb file
+        run: |
+          mv "eccodes.deb" "eccodes-$(cat version.txt).deb"
+          sudo dpkg -i "eccodes-$(cat version.txt).deb"
+          sudo apt-get install python3-pip
+          pip3 install eccodes-python
+          python3 -m eccodes selfcheck
+          
+      # Create a GitHub Release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.PACKAGE_VERSION }}
+          release_name: Release v${{ env.PACKAGE_VERSION }}
+          draft: false
+          prerelease: false
+
+      # Upload the .deb package to the GitHub Release
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/eccodes-${{ env.PACKAGE_VERSION }}.deb
+          asset_name: "eccodes-${{ env.PACKAGE_VERSION }}.deb"
+          asset_content_type: application/octet-stream
