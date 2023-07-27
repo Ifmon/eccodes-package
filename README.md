@@ -11,8 +11,8 @@ As ECMWF does not provide a package repository for "eccodes," users often have t
 
 | Platform        | Support                   |
 |-----------------|---------------------------|
-| Debian          | :white_check_mark:        |
-| Ubuntu          | :construction: (Work in Progress)        |
+| Debian          | 🚧        |
+| Ubuntu          | ✅     |
 | CentOS          | :construction: (Work in Progress)        |
 | Fedora          | :construction: (Work in Progress)        |
 | Red Hat         | :construction: (Work in Progress)        |
