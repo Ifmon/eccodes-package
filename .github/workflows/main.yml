@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install AEC Library (Ubuntu/Debian)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-latest'
@@ -96,7 +96,7 @@ jobs:
           python3 -m eccodes selfcheck
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: eccodes-${{ env.PACKAGE_VERSION }}-${{ matrix.os }}
           path: eccodes-${{ env.PACKAGE_VERSION }}-${{ matrix.os }}.*
@@ -106,20 +106,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
+      - name: Download Artifacts (Ubuntu)
+        uses: actions/download-artifact@v3
         with:
           name: eccodes-${{ env.PACKAGE_VERSION }}-ubuntu-latest
           path: ./ubuntu
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
+      - name: Download Artifacts (Debian)
+        uses: actions/download-artifact@v3
         with:
           name: eccodes-${{ env.PACKAGE_VERSION }}-debian-latest
           path: ./debian
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
+      - name: Download Artifacts (Arch)
+        uses: actions/download-artifact@v3
         with:
           name: eccodes-${{ env.PACKAGE_VERSION }}-arch-latest
           path: ./arch
