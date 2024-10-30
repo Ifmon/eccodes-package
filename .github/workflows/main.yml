@@ -3,7 +3,7 @@ name: Build and package EcCodes
 on:
   schedule:
     - cron: '0 0 * * *'
-    
+
   push:
     branches:
       - main
@@ -12,25 +12,35 @@ on:
 
 jobs:
   build_and_package:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, debian-latest, arch-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install AEC Library
+      - name: Install AEC Library (Ubuntu/Debian)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libaec-dev
-          
+
+      - name: Install AEC Library (Arch)
+        if: matrix.os == 'arch-latest'
+        run: |
+          sudo pacman -Syu --noconfirm libaec
+
       - name: Download eccodes tarball
         run: |
-          chmod +x download.sh  
-          ./download.sh  
+          chmod +x download.sh
+          ./download.sh
+
       - name: Set Package Version
         id: set_version
         run: echo "PACKAGE_VERSION=$(cat version.txt)" >> $GITHUB_ENV
-
 
       - name: Extract Source Tarball
         run: tar -xzf "eccodes-$(cat version.txt).tar.gz"  # Use the version from the file
@@ -48,7 +58,8 @@ jobs:
           ctest
           make install
 
-      - name: Package the Built Files
+      - name: Package the Built Files (Ubuntu/Debian)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-latest'
         working-directory: eccodes
         run: |
           mkdir DEBIAN
@@ -56,14 +67,34 @@ jobs:
           cd ..
           dpkg-deb --build eccodes
 
-      - name: Check deb file
+      - name: Package the Built Files (Arch)
+        if: matrix.os == 'arch-latest'
+        working-directory: eccodes
+        run: |
+          mkdir -p pkg/usr/local/bin
+          cp -r * pkg/usr/local/bin/
+          cd ..
+          tar -czvf eccodes.tar.gz eccodes
+
+      - name: Check deb file (Ubuntu/Debian)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-latest'
         run: |
           mv "eccodes.deb" "eccodes-$(cat version.txt).deb"
           sudo dpkg -i "eccodes-$(cat version.txt).deb"
           sudo apt-get install python3-pip
           pip3 install eccodes-python
           python3 -m eccodes selfcheck
-          
+
+      - name: Check tar.gz file (Arch)
+        if: matrix.os == 'arch-latest'
+        run: |
+          mv "eccodes.tar.gz" "eccodes-$(cat version.txt).tar.gz"
+          tar -xzf "eccodes-$(cat version.txt).tar.gz"
+          sudo pacman -U eccodes-$(cat version.txt).tar.gz
+          sudo pacman -S python-pip
+          pip3 install eccodes-python
+          python3 -m eccodes selfcheck
+
       # Create a GitHub Release
       - name: Create Release
         id: create_release
@@ -76,9 +107,10 @@ jobs:
           draft: false
           prerelease: false
 
-      # Upload the .deb package to the GitHub Release
-      - name: Upload Release Asset
-        id: upload-release-asset
+      # Upload the .deb package to the GitHub Release (Ubuntu/Debian)
+      - name: Upload Release Asset (Ubuntu/Debian)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-latest'
+        id: upload-release-asset-deb
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,4 +118,17 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/eccodes-${{ env.PACKAGE_VERSION }}.deb
           asset_name: "eccodes-${{ env.PACKAGE_VERSION }}.deb"
+          asset_content_type: application/octet-stream
+
+      # Upload the .tar.gz package to the GitHub Release (Arch)
+      - name: Upload Release Asset (Arch)
+        if: matrix.os == 'arch-latest'
+        id: upload-release-asset-tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/eccodes-${{ env.PACKAGE_VERSION }}.tar.gz
+          asset_name: "eccodes-${{ env.PACKAGE_VERSION }}.tar.gz"
           asset_content_type: application/octet-stream
